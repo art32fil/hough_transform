@@ -55,8 +55,8 @@ private: // methods
   Array_points create(const Array_coords& x, const Array_coords& y) {
     Array_points out;
     for (size_t i = 0; i < x.size(); i++) {
-      int x_cell = x_to_cell(x[i]+_delta_x/2);
-      int y_cell = y_to_cell(y[i]+_delta_y/2);
+      int x_cell = x_to_cell(x[i]+_delta_x/3);
+      int y_cell = y_to_cell(y[i]+_delta_y/3);
       out.push_back({x_cell,y_cell});
     }
     return out;

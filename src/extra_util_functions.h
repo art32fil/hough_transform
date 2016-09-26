@@ -2,10 +2,14 @@
 #include <vector>
 #include <math.h>
 #include <memory>
+#include <iostream>
+#include <map>
+#include <string>
 
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
+
 
 template <typename T>
 inline T& get(std::vector<T>& array, long ind) {
@@ -34,8 +38,11 @@ inline T scalar_mul(const std::vector<T>& v1,
                     long ind1 = 0, long ind2 = 0) {
   size_t v1size = v1.size();
   size_t v2size = v2.size();
-  if (v1size != v2size)
+  if (v1size != v2size) {
+    //std::cout << "vectors in scalar mull are not the same lenght!!" << std::endl
+    //          << "l1 = " << v1.size() << " l2 = " << v2.size() << std::endl;
     v1size = std::min(v1size,v2size);
+  }
   T out = 0;
   for (long i = 0; i < (long)v1size; i++)
     out += get(v1,ind1+i)*get(v2,ind2+i);
@@ -92,12 +99,13 @@ inline GLvoid ReSizeGLScene( GLsizei w, GLsizei h ){
 
 inline int create_window(long long w, long long h,const char* name) {
 
+  int div = 2;
   glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-  glutInitWindowSize(glutGet(GLUT_SCREEN_WIDTH)/4,
-                     glutGet(GLUT_SCREEN_HEIGHT)/4);
+  glutInitWindowSize(glutGet(GLUT_SCREEN_WIDTH)/div,
+                     glutGet(GLUT_SCREEN_HEIGHT)/div);
   glutInitWindowPosition(WindowPoisition::x_position, WindowPoisition::y_position);
-  WindowPoisition::y_position += glutGet(GLUT_SCREEN_HEIGHT)/4;
-  WindowPoisition::x_position += WindowPoisition::y_position / glutGet(GLUT_SCREEN_HEIGHT) * glutGet(GLUT_SCREEN_WIDTH)/4;
+  WindowPoisition::y_position += glutGet(GLUT_SCREEN_HEIGHT)/div;
+  WindowPoisition::x_position += WindowPoisition::y_position / glutGet(GLUT_SCREEN_HEIGHT) * glutGet(GLUT_SCREEN_WIDTH)/div;
   WindowPoisition::y_position = WindowPoisition::y_position % glutGet(GLUT_SCREEN_HEIGHT);
   int discriptor = glutCreateWindow(name);
 
@@ -125,24 +133,56 @@ inline void printRect(int bot, int top, int left, int right, double gray) {
 }
 
 template<typename T>
-inline void print(std::vector<T>& y, const char* name) {
-  create_window(y.size()+2,3,name);
+inline void print(std::vector<T>& y, int windowID) {
+  glutSetWindow(windowID);
+
+  glClearColor (1.0, 1.0, 1.0, 0.0);
+  //glMatrixMode(GL_PROJECTION);
+  //glLoadIdentity();
+  glClear (GL_COLOR_BUFFER_BIT);
+  glFlush();
+
   glColor3f(0.5,0.5,0.5);
   glBegin(GL_LINE_STRIP);
     glVertex3f(1.0,1.0,0.0);
     glVertex3f(y.size(),1.0,0.0);
   glEnd();
+  T max_y = my_max(y);
   glBegin(GL_LINE_STRIP);
     glVertex3f(1.0,1.0,0.0);
-    glVertex3f(1.0,my_max(y),0.0);
+    glVertex3f(1.0,max_y,0.0);
   glEnd();
+
   for (size_t x = 0; x < y.size()-1; x++) {
     glBegin(GL_LINE_STRIP);
-      glVertex3f(x+1,y[x]/(double)my_max(y)+1,0.0);
-      glVertex3f(x+1+1,y[x+1]/(double)my_max(y)+1,0.0);
+      glVertex3f(x+1,y[x]/(double)max_y+1,0.0);
+      glVertex3f(x+1+1,y[x+1]/(double)max_y+1,0.0);
     glEnd();
+    if (y[x] == max_y) {
+      glColor3f(1.0,0.0,0.0);
+      glBegin(GL_LINE_STRIP);
+        glVertex3f(x+1,2.0,0.0);
+        glVertex3f(x+1,1.0,0.0);
+      glEnd();
+      glColor3f(0.5,0.5,0.5);
+    }
   }
   glFlush();
+}
+
+template<typename T>
+inline void print(std::vector<T>& y, std::string name) {
+  static std::map<std::string,int> window_store;
+  if (window_store.find(name) == window_store.end()) {
+    int windID = create_window(y.size()+2,3,name.c_str());
+    window_store.insert({name,windID});
+  }
+  /*if (window_store.find(name)->second == 3) {
+    for (auto elem : y) {
+      std::cout << elem << " ";
+    }
+  }*/
+  print(y,window_store.find(name)->second);
 }
 
 /*template<template <class> class Array, class Type>

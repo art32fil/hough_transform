@@ -30,27 +30,31 @@ void HoughTransform::update_size(const size_t new_height) {
 }
 
 HoughTransform::Cov_type HoughTransform::invariant_function(int x) {
+  //return x*x;
   return x*x;
 }
 
 size_t HoughTransform::width()  const { return _cells.size(); }
 size_t HoughTransform::height() const { return _cells[0].size(); }
 
-void HoughTransform::transform(const DiscretePoint2D& p){
+void HoughTransform::transform(const PointD& p){
   Array_points points = rg.raster_build(0, 2*M_PI,
                                         [p](double fi)->double {
                                           return p.x*cos(fi) + p.y*sin(fi);
                                         });
   int max_y = 0;
-  for (auto p : points) {
-    if (max_y < p.y)
-      max_y = p.y;
+  for (auto pt : points) {
+    if (max_y < pt.y)
+      max_y = pt.y;
   }
   update_size(max_y);
-  for (auto p : points) {
-    if (0 <= p.x && p.x < (int) width() &&
-        0 <= p.y && p.y < (int) height()) {
-      _cells[p.x][p.y]++;
+  //for (auto pt : points) {
+  for (int i = 0; i < points.size()-1; i++) {
+    if (0 <= points[i].x && points[i].x < (int) width() &&
+        0 <= points[i].y && points[i].y < (int) height()
+         &&!((points[i+1].x - points[i].x == 0)&&(points[i+1].y - points[i].y == 0))
+        ) {
+      _cells[points[i].x][points[i].y]++;
     }
     /*else {
       cout << "point is dropped: (" << p.x << "; " << p.y << ") when \n"
@@ -61,9 +65,9 @@ void HoughTransform::transform(const DiscretePoint2D& p){
 
 shared_ptr<HoughTransform::Array_cov> HoughTransform::spectrum() {
   shared_ptr<Array_cov> out(new Array_cov(width(),0));
-  for (size_t x = 0; x < width(); x++) {
+  for (size_t x = 0; x < width()-1; x++) {
     for (size_t y = 0; y < height(); y++) {
-      out->at(x) += invariant_function(_cells[x][y]);
+      out->at(x) += invariant_function(_cells[x+1][y]);
     }
   }
   return out;
@@ -99,7 +103,7 @@ std::ostream& operator<<(std::ostream& ostr, const HoughTransform& h) {
   ostr << endl;
   for (size_t y = 0; y < h.height(); y++) {
     for (size_t x = 0; x < h.width(); x++) {
-      ostr << std::setw(2) << h.getCells()[x][y];
+      ostr << std::setw(1) << h.getCells()[x][y];
     }
     ostr << endl;
   }
@@ -117,8 +121,9 @@ int HoughTransform::printOpenGL() const {
   }
   for (long int y = height()-1; 0 <= y; y--) {
     for (size_t x = 0; x < width(); x++) {
+      if (_cells[x][y])
       printRect(y+height()/2,y+1+height()/2,x+width()/2,x+1+width()/2,
-                1-((double)_cells[x][y])/((double) maxVal));
+                (maxVal-_cells[x][y])/((double) maxVal));
     }
 
   }

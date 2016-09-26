@@ -11,6 +11,12 @@
 #include "raster.h"
 #include "extra_util_functions.h"
 
+struct PointD {
+  double x;
+  double y;
+};
+
+
 class HoughTransform{
 public: //typedefs
   using DOUBLE     = double;
@@ -25,7 +31,7 @@ public: //typedefs
 public: //methods
   HoughTransform(int theta_partition, double delta_ro);
 
-  void transform(const DiscretePoint2D& p);
+  void transform(const PointD& p);
   std::shared_ptr<Array_cov> spectrum();
   //std::shared_ptr<Array_cells> spectrumRO();
 

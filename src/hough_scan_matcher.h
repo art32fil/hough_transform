@@ -34,8 +34,10 @@ private: //fields
   double min_sensity = 0.8;
   int window_scan;
   int window_local_map;
+
   //int max_iter = 10;
   //TransformedLaserScan prev_scan;
   std::shared_ptr<HoughTransform::Array_cov> prev_spectr;
+  std::shared_ptr<HoughTransform> prev_HT;
   RobotState prev_pose;
 };
