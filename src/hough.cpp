@@ -65,23 +65,23 @@ void HoughTransform::transform(const PointD& p){
 
 shared_ptr<HoughTransform::Array_cov> HoughTransform::spectrum() {
   shared_ptr<Array_cov> out(new Array_cov(width(),0));
-  for (size_t x = 0; x < width()-1; x++) {
+  for (size_t x = 0; x < width(); x++) {
     for (size_t y = 0; y < height(); y++) {
-      out->at(x) += invariant_function(_cells[x+1][y]);
+      out->at(x) += invariant_function(_cells[x][y]);
     }
   }
   return out;
 }
 
-/*shared_ptr<HoughTransform::Array_cells> HoughTransform::spectrumRO() {
-  shared_ptr<Array_cells> out(new Array_cells(height(),0));
+shared_ptr<HoughTransform::Array_cov> HoughTransform::spectrumRO() {
+  shared_ptr<Array_cov> out(new Array_cov(height(),0));
   for (size_t y = 0; y < height(); y++) {
     for (size_t x = 0; x < width(); x++) {
       out->at(y) += invariant_function(_cells[x][y]);
     }
   }
   return out;
-}*/
+}
 
 HoughTransform::Array2d& HoughTransform::getCells() { return _cells; }
 const HoughTransform::Array2d& HoughTransform::getCells() const

@@ -32,7 +32,7 @@ inline shared_ptr<_set_> find_maxs(const vector<T>& array) {
   shared_ptr<_set_> out(new _set_([](PointMax p1, PointMax p2)-> bool {
                                     return p2.sigma <= p1.sigma;
                                   }));
-  const int division_size = 2;
+  const int division_size = 8;
   const int max_iter = array.size()/division_size;
   for (long  i = -(array.size()/division_size); i < (long) array.size()/division_size; i++) {
     int j = 0;
@@ -123,13 +123,28 @@ int generate_map(const RobotState& init_pose, const TransformedLaserScan& scan,
   glutMainLoop();
 }
 
+shared_ptr<HT::Array_cov> cov_rho(shared_ptr<HT::Array_cov> prev,
+                                  shared_ptr<HT::Array_cov> curr) {
+  long long size = curr->size();
+  shared_ptr<HT::Array_cov> out(new HT::Array_cov(2*size-1,0));
+  for (size_t i = 0; i < size; i++) {
+    for (long long j = 0; j < size; j++) {
+      HT::Cov_type prev_val_pos = (j+i < 0 || j+i >= size) ? 0 : prev->at(j+i);
+      HT::Cov_type prev_val_neg = (j-i < 0 || j-i >= size) ? 0 : prev->at(j-i);
+      out->at(out->size() + i) += prev_val_pos*curr->at(j);
+      if (i != 0)
+        out->at(out->size() - i) += prev_val_neg*curr->at(j);
+    }
+  }
+}
+
 double HoughScanMatcher::process_scan(const RobotState &init_pose,
                                       const TransformedLaserScan &scan,
                                       const GridMap &map,
                                       RobotState &pose_delta) {
 
   shared_ptr<HoughTransform> scan_HT{new HoughTransform{720, 0.1}};
-
+  shared_ptr<HoughTransform> scan_HT_rho{new HoughTransform{720,0.1}};
   //HoughTransform local_map_HT(720,0.1);
   //HoughTransform mapHT(scan.points.size(), map.scale()/2);
   bool new_iter = true;
@@ -147,14 +162,17 @@ double HoughScanMatcher::process_scan(const RobotState &init_pose,
     double x = scan.points[i].range * cos(init_pose.theta + scan.points[i].angle);
     double y = scan.points[i].range * sin(init_pose.theta + scan.points[i].angle);
     scan_HT->transform({x,y});
+
+    x = init_pose.x + scan.points[i].range * cos(scan.points[i].angle);
+    y = init_pose.y + scan.points[i].range * sin(scan.points[i].angle);
+    //scan_HT_rho->transform({x,y});
     //cout << "transform happens\n";
     //i++;
   }
   //cout << endl << endl;
 
   //scan_HT.printOpenGL();
-
-  //cout << scan_HT << endl;
+  //cout << *scan_HT << endl;
   /*generate_map(init_pose,scan,map,window_scan,window_local_map,local_map_HT,scan_HT);
 
   for (const auto& psp : prev_scan.points) {
@@ -172,13 +190,17 @@ double HoughScanMatcher::process_scan(const RobotState &init_pose,
     }
   }*/
   shared_ptr<HT::Array_cov> scanSpectr = scan_HT->spectrum();
+  //shared_ptr<HT::Array_cov> scanSpectr_rho = scan_HT->spectrumRO();
   //shared_ptr<HT::Array_cov> mapSpectr  = local_map_HT.spectrum();
 
 
   if(count == 0) {
     prev_spectr = scanSpectr;
-    prev_HT = scan_HT;
+    //prev_spectr_rho = scanSpectr_rho;
+    //prev_HT = scan_HT;
     count++;
+    pose_delta.x = 0;
+    pose_delta.y = 0;
     pose_delta.theta = 0;
     return 0;
   }
@@ -207,13 +229,20 @@ double HoughScanMatcher::process_scan(const RobotState &init_pose,
   }
   shared_ptr<_set_> better_range_array = find_maxs(covarianceRO);*/
   cout << "offset found: " << offset << ", with value " << iterator->value << endl;
+  //cout << "d_yaw = " << scan.d_yaw << endl;
+  //cout << "sm said " << offset*scan_HT->delta_theta() <<endl;
   pose_delta.theta = offset*scan_HT->delta_theta();
-  cout << pose_delta.theta << endl;
+  cout << "корректировка " << pose_delta.theta << endl;
   pose_delta.x = 0;
   pose_delta.y = 0;
 
-  iterator++;
-  /*if (iterator != better_angle_array->end()) {
+  //HT::Array_cov covarianceRO(scanSpectr_rho->size());
+  //for (size_t i = 0; i < covarianceRO.size(); i++) {
+  //    covariance[i] = scalar_mul(*prev_spectr_rho,*scanSpectr_rho,i,0);
+  //  }
+
+  /*iterator++;
+  if (iterator != better_angle_array->end()) {
     cout << "second offset found: " << iterator->ind << ", with value " << iterator->value << endl;
   }*/
 
@@ -242,6 +271,7 @@ double HoughScanMatcher::process_scan(const RobotState &init_pose,
     print(covariance,"cov");
   }*/
   prev_spectr = scanSpectr;
+  //prev_spectr_rho = scanSpectr_rho;
   HoughScanMatcher::count++;
 
   //<!-----------------!>
@@ -252,14 +282,6 @@ double HoughScanMatcher::process_scan(const RobotState &init_pose,
   //the output Δρ=ρ_num*offset will built the equation: Δρ=cos(θ)*Δx+sin(θ)*Δy | θ=0
   //whitch means that Δx = ρ_num*offset;
 
-  HT::Array_cov covarianceRO(scan_HT->height());
-  print(get(prev_HT->getCells(),offset+1),"prev_ro");
-  print(get(scan_HT->getCells(),1),"cur_ro");
-  for (size_t i = 0; i < covarianceRO.size(); i++) {
-    covarianceRO[i] = scalar_mul(get(prev_HT->getCells(),offset+180),get(scan_HT->getCells(),180),i,0);
-  }
-  print(covarianceRO, "covRO");
-  auto better_rho_array = find_maxs(covarianceRO);
   //pose_delta.y = better_rho_array->begin()->ind * scan_HT->delta_ro();
 
   //double min_cost = std::numeric_limits<double>::max();

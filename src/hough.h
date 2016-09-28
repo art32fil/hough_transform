@@ -33,7 +33,7 @@ public: //methods
 
   void transform(const PointD& p);
   std::shared_ptr<Array_cov> spectrum();
-  //std::shared_ptr<Array_cells> spectrumRO();
+  std::shared_ptr<Array_cov> spectrumRO();
 
   size_t height() const;
   size_t width() const;

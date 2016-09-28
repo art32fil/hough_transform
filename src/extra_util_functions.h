@@ -5,6 +5,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include "vector_pos_neg_index.h"
 
 #include <GL/gl.h>
 #include <GL/glu.h>
@@ -31,6 +32,22 @@ inline const T& get(const std::vector<T>& array, long ind) {
   return array[ind_cut];
 }
 
+template <typename T>
+inline T& get(VectorPosNegIndex<T>& array, long ind) {
+  //if (array.exist_at(ind))
+    return array[ind];
+}
+
+template <typename T>
+inline const T& get(const VectorPosNegIndex<T>& array, long ind) {
+  if (0 <= ind && ind < (long) array.size())
+    return array[ind];
+  long ind_cut = ind % (long) array.size();
+  if (ind_cut < 0)
+    ind_cut += array.size();
+  return array[ind_cut];
+}
+
 
 template <typename T>
 inline T scalar_mul(const std::vector<T>& v1,
@@ -47,6 +64,21 @@ inline T scalar_mul(const std::vector<T>& v1,
   for (long i = 0; i < (long)v1size; i++)
     out += get(v1,ind1+i)*get(v2,ind2+i);
   return out;
+}
+
+template <typename T>
+inline T scalar_mul(const VectorPosNegIndex<T>& v1,
+                    const VectorPosNegIndex<T>& v2,
+                    long ind1 = 0, long ind2 = 0) {
+  size_t v1size = v1.size();
+  size_t v2size = v2.size();
+  if (v1size != v2size) {
+    v1size = std::min(v1size,v2size);
+  }
+  T out = 0;
+  for (long i = -(long)v1.size_neg(); i < (long)v1.size_pos(); i++) {
+    out += v1[ind1+i]*v2[ind2+i];
+  }
 }
 
 template <typename T>

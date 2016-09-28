@@ -40,7 +40,7 @@ public:
         }
       }
       else {
-        for(int y = current.y; next.y < y; y--) {
+        for(int y = current.y-1; next.y < y; y--) {
           res.push_back({current.x,y});
         }
       }
@@ -68,7 +68,7 @@ private: // methods
   Array_coords points_x(const world_t x_st, const world_t x_end){
     Array_coords out;
     if (x_st < x_end) {
-      for (world_t x = x_st+_delta_x; x <= x_end; x+=_delta_x)
+      for (world_t x = x_st; x <= x_end; x+=_delta_x)
         out.push_back(x);
     }
     else {

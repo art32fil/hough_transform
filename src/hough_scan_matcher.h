@@ -38,6 +38,7 @@ private: //fields
   //int max_iter = 10;
   //TransformedLaserScan prev_scan;
   std::shared_ptr<HoughTransform::Array_cov> prev_spectr;
+  std::shared_ptr<HoughTransform::Array_cov> prev_spectr_rho;
   std::shared_ptr<HoughTransform> prev_HT;
   RobotState prev_pose;
 };
