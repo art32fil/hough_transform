@@ -32,7 +32,7 @@ inline shared_ptr<_set_> find_maxs(const vector<T>& array) {
   shared_ptr<_set_> out(new _set_([](PointMax p1, PointMax p2)-> bool {
                                     return p2.sigma <= p1.sigma;
                                   }));
-  const int division_size = 8;
+  const int division_size = 2;
   const int max_iter = array.size()/division_size;
   for (long  i = -(array.size()/division_size); i < (long) array.size()/division_size; i++) {
     int j = 0;
@@ -156,11 +156,18 @@ double HoughScanMatcher::process_scan(const RobotState &init_pose,
       continue;
     }
     new_iter = false;*/
-    //double x = sp.range * cos(init_pose.theta + sp.angle);
-    //double y = sp.range * sin(init_pose.theta + sp.angle);
 
     double x = scan.points[i].range * cos(init_pose.theta + scan.points[i].angle);
     double y = scan.points[i].range * sin(init_pose.theta + scan.points[i].angle);
+    /*double x,y;
+    if (count == 0) {
+      x = scan.points[i].range * cos(scan.points[i].angle);
+      y = scan.points[i].range * sin(scan.points[i].angle);
+    }
+    else {
+      x = scan.points[i].range * cos(scan.d_yaw + scan.points[i].angle);
+      y = scan.points[i].range * sin(scan.d_yaw + scan.points[i].angle);
+    }*/
     scan_HT->transform({x,y});
 
     x = init_pose.x + scan.points[i].range * cos(scan.points[i].angle);
@@ -171,7 +178,7 @@ double HoughScanMatcher::process_scan(const RobotState &init_pose,
   }
   //cout << endl << endl;
 
-  //scan_HT.printOpenGL();
+  //scan_HT->printOpenGL();
   //cout << *scan_HT << endl;
   /*generate_map(init_pose,scan,map,window_scan,window_local_map,local_map_HT,scan_HT);
 
@@ -231,7 +238,7 @@ double HoughScanMatcher::process_scan(const RobotState &init_pose,
   cout << "offset found: " << offset << ", with value " << iterator->value << endl;
   //cout << "d_yaw = " << scan.d_yaw << endl;
   //cout << "sm said " << offset*scan_HT->delta_theta() <<endl;
-  pose_delta.theta = offset*scan_HT->delta_theta();
+  pose_delta.theta = offset*scan_HT->delta_theta()/(double)2;
   cout << "корректировка " << pose_delta.theta << endl;
   pose_delta.x = 0;
   pose_delta.y = 0;

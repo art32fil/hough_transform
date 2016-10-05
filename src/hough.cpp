@@ -49,10 +49,10 @@ void HoughTransform::transform(const PointD& p){
   }
   update_size(max_y);
   //for (auto pt : points) {
-  for (int i = 0; i < points.size()-1; i++) {
+  for (int i = 0; i < points.size(); i++) {
     if (0 <= points[i].x && points[i].x < (int) width() &&
         0 <= points[i].y && points[i].y < (int) height()
-         &&!((points[i+1].x - points[i].x == 0)&&(points[i+1].y - points[i].y == 0))
+        // &&!((points[i+1].x - points[i].x == 0)&&(points[i+1].y - points[i].y == 0))
         ) {
       _cells[points[i].x][points[i].y]++;
     }
