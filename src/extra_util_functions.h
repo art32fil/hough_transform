@@ -66,6 +66,25 @@ inline T scalar_mul(const std::vector<T>& v1,
   return out;
 }
 
+template <typename T>
+inline T difference(const std::vector<T>& v1,
+                    const std::vector<T>& v2,
+                    long ind1 = 0, long ind2 = 0) {
+  size_t v1size = v1.size();
+  size_t v2size = v2.size();
+  if (v1size != v2size) {
+    //std::cout << "vectors in scalar mull are not the same lenght!!" << std::endl
+    //          << "l1 = " << v1.size() << " l2 = " << v2.size() << std::endl;
+    v1size = std::min(v1size,v2size);
+  }
+  T out = 0;
+  for (long i = 0; i < (long)v1size; i++) {
+    T curr = std::abs(get(v1,ind1+i)-get(v2,ind2+i));
+    out += curr*curr;
+  }
+  return out;
+}
+
 /*template <typename T>
 inline T scalar_mul(const VectorPosNegIndex<T>& v1,
                     const VectorPosNegIndex<T>& v2,
@@ -165,14 +184,16 @@ inline void printRect(int bot, int top, int left, int right, double gray) {
 }
 
 template<typename T>
-inline void print(std::vector<T>& y, int windowID) {
+inline void print(std::vector<T>& y, int windowID, bool flush = true, float r=0, float g=0, float b=0) {
   glutSetWindow(windowID);
 
-  glClearColor (1.0, 1.0, 1.0, 0.0);
-  //glMatrixMode(GL_PROJECTION);
-  //glLoadIdentity();
-  glClear (GL_COLOR_BUFFER_BIT);
-  glFlush();
+  if (flush) {
+    glClearColor (1.0, 1.0, 1.0, 0.0);
+    //glMatrixMode(GL_PROJECTION);
+    //glLoadIdentity();
+    glClear (GL_COLOR_BUFFER_BIT);
+    glFlush();
+  }
 
   glColor3f(0.5,0.5,0.5);
   glBegin(GL_LINE_STRIP);
@@ -185,6 +206,7 @@ inline void print(std::vector<T>& y, int windowID) {
     glVertex3f(1.0,max_y,0.0);
   glEnd();
 
+  glColor3f(r,g,b);
   for (size_t x = 0; x < y.size()-1; x++) {
     glBegin(GL_LINE_STRIP);
       glVertex3f(x+1,y[x]/(double)max_y+1,0.0);
@@ -196,14 +218,14 @@ inline void print(std::vector<T>& y, int windowID) {
         glVertex3f(x+1,2.0,0.0);
         glVertex3f(x+1,1.0,0.0);
       glEnd();
-      glColor3f(0.5,0.5,0.5);
+      glColor3f(r,g,b);
     }
   }
   glFlush();
 }
 
 template<typename T>
-inline void print(std::vector<T>& y, std::string name) {
+inline void print(std::vector<T>& y, std::string name, bool flush = true, float r=0, float g=0, float b=0) {
   static std::map<std::string,int> window_store;
   if (window_store.find(name) == window_store.end()) {
     int windID = create_window(y.size()+2,3,name.c_str());
@@ -214,7 +236,7 @@ inline void print(std::vector<T>& y, std::string name) {
       std::cout << elem << " ";
     }
   }*/
-  print(y,window_store.find(name)->second);
+  print(y, window_store.find(name)->second, flush, r, g, b);
 }
 
 /*template<template <class> class Array, class Type>

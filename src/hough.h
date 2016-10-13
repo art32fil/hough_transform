@@ -21,7 +21,7 @@ class HoughTransform{
 public: //typedefs
   using DOUBLE     = double;
   using Cells_type = int;
-  using Cov_type   = long long;
+  using Cov_type   = DOUBLE;
   //using size_t     = std::size_t;
 
   using Array_cells  = std::vector<Cells_type>;
@@ -52,7 +52,7 @@ public: //methods
 
   //DiscretePoint2D convert_to_cell(const double x, const double y);
 private:
-  Cov_type invariant_function(int x);
+  long long invariant_function(long long x);
   void update_size(const std::size_t new_height);
   Array2d _cells;
   RasterGrid<DiscretePoint2D> rg;

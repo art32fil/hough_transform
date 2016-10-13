@@ -29,7 +29,7 @@ void HoughTransform::update_size(const size_t new_height) {
   }
 }
 
-HoughTransform::Cov_type HoughTransform::invariant_function(int x) {
+long long HoughTransform::invariant_function(long long x) {
   //return x*x;
   return x*x;
 }
@@ -49,7 +49,7 @@ void HoughTransform::transform(const PointD& p){
   }
   update_size(max_y);
   //for (auto pt : points) {
-  for (int i = 0; i < points.size(); i++) {
+  for (size_t i = 0; i < points.size(); i++) {
     if (0 <= points[i].x && points[i].x < (int) width() &&
         0 <= points[i].y && points[i].y < (int) height()
         // &&!((points[i+1].x - points[i].x == 0)&&(points[i+1].y - points[i].y == 0))
@@ -64,13 +64,20 @@ void HoughTransform::transform(const PointD& p){
 }
 
 shared_ptr<HoughTransform::Array_cov> HoughTransform::spectrum() {
-  shared_ptr<Array_cov> out(new Array_cov(width(),0));
+  shared_ptr<vector<long long>> cov(new vector<long long>(width(),0));
+  shared_ptr<Array_cov> corr(new Array_cov(width(),0));
+  long long max = 0;
   for (size_t x = 0; x < width(); x++) {
     for (size_t y = 0; y < height(); y++) {
-      out->at(x) += invariant_function(_cells[x][y]);
+      cov->at(x) += invariant_function(_cells[x][y]);
     }
+    if (max < cov->at(x))
+      max = cov->at(x);
   }
-  return out;
+  for (size_t i = 0; i < cov->size(); i++) {
+    corr->at(i) = cov->at(i)/(Cov_type)max;
+  }
+  return corr;
 }
 
 shared_ptr<HoughTransform::Array_cov> HoughTransform::spectrumRO() {

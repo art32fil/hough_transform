@@ -21,8 +21,9 @@ public:
     int i = 1;
     char* c = "~/";
     glutInit(&i,&c);
-    //window_scan = create_window(300,300,"scan");
-    //window_local_map = create_window(300,300,"local_map");
+    window_scan = create_window(300,300,"scan");
+    window_local_map = create_window(300,300,"local_map");
+    //window_local_map = create_window(300,300,"local map");
   }
 
   virtual double process_scan (const RobotState &init_pose,

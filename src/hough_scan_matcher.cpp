@@ -19,25 +19,30 @@
 using namespace std;
 using HT = HoughTransform;
 
+template <typename T>
 struct PointMax{
-  long long value;
+  T value;
   int sigma;
   long ind;
 };
 
-using _set_ = set<PointMax, function<bool(PointMax,PointMax)>>;
 template <typename T>
-inline shared_ptr<_set_> find_maxs(const vector<T>& array) {
+using _set_ = set<PointMax<T>, function<bool(PointMax<T>,PointMax<T>)>>;
+template <typename T>
+inline shared_ptr<_set_<T>> find_maxs(const vector<T>& array) {
 
-  shared_ptr<_set_> out(new _set_([](PointMax p1, PointMax p2)-> bool {
-                                    return p2.sigma <= p1.sigma;
+  shared_ptr<_set_<T>> out(new _set_<T>([](PointMax<T> p1, PointMax<T> p2) -> bool {
+                                    return p2.sigma <=p1.sigma;
                                   }));
-  const int division_size = 2;
-  const int max_iter = array.size()/division_size;
-  for (long  i = -(array.size()/division_size); i < (long) array.size()/division_size; i++) {
+  const int div = 16;
+  const int max_iter = array.size()/div;
+  for (long  i = -(array.size()/div); i < (long) array.size()/div; i++) {
     int j = 0;
-    while ((get<T>(array,i-(j+1)) <= get<T>(array,i)) && (get<T>(array,i+(j+1)) <= get<T>(array,i))
-           && j < max_iter) {j++;}
+    while ((get<T>(array,i-(j+1)) >= get<T>(array,i)) &&
+           (get<T>(array,i+(j+1)) >= get<T>(array,i)) &&
+           j < max_iter) {
+      j++;
+    }
     if (3 < j)
       out->insert({get<T>(array,i),j,i});
   }
@@ -73,69 +78,74 @@ bool isNear(const ScanPoint& p1, const ScanPoint& p2, bool new_iter) {
   }
   return false;
 }
+bool is_in_correct_sector(const DiscretePoint2D& init,
+                          double a1, double b1, double c1,
+                          double a2, double b2, double c2,
+                          const DiscretePoint2D& control,
+                          const DiscretePoint2D& victim) {
+  bool control_sign_to_line1 = std::signbit(a1*control.x + b1*control.y + c1);
+  bool control_sign_to_line2 = std::signbit(a2*control.x + b2*control.y + c2);
 
-int generate_map(const RobotState& init_pose, const TransformedLaserScan& scan,
-                 const GridMap& map, int window_scan, int window_map,
-    /*out vars*/ HoughTransform& local_map_HT, HoughTransform& scan_map_HT) {
-  DiscretePoint2D robot_on_map = map.world_to_cell(init_pose.x,init_pose.y);
-  int x_max = 0, y_max = 0, ii = 0, scan_count = 0;
-  glutSetWindow(window_scan);
-  glClearColor (1.0, 1.0, 1.0, 0.0);
-  glClear (GL_COLOR_BUFFER_BIT);
-  for (auto& sp : scan.points) {
-    if (ii%3 == 0) {
-      double x = sp.range * cos(sp.angle);
-      double y = sp.range * sin(sp.angle);
-      PointD dsp{x,y};
-      printRect(150+dsp.y,150+dsp.y+1,150+dsp.x,150+dsp.x+1,0.0);
-      scan_map_HT.transform(dsp);
-      if (x_max < dsp.x) {
-        x_max = dsp.x;
-      }
-      if (y_max < dsp.y) {
-        y_max = dsp.y;
-      }
-      scan_count++;
-    }
-    ii++;
+  bool victim_sign_to_line1  = std::signbit(a1*victim.x + b1*victim.y + c1);
+  bool victim_sign_to_line2  = std::signbit(a2*victim.x + b2*victim.y + c2);
+
+  bool init_sign_to_line1 = std::signbit(a1*init.x + b1*init.y + c1);
+  bool init_sign_to_line2 = std::signbit(a2*init.x + b2*init.y + c2);
+
+  if (init_sign_to_line1 == control_sign_to_line1 &&
+      init_sign_to_line2 == control_sign_to_line2) {
+    return victim_sign_to_line1 == control_sign_to_line1 &&
+           victim_sign_to_line2 == control_sign_to_line2;
   }
-  glFlush();
-  //cout << "точек из скана: " << scan_count << endl;
-  //cout << "(" << x_max << ";" << y_max << ")" << endl;
-  float expand_koef = 1.2;
-  float min_sensity = 0.7;
-  int map_count = 0;
-  glutSetWindow(window_map);
-  glClearColor (1.0, 1.0, 1.0, 0.0);
-  glClear (GL_COLOR_BUFFER_BIT);
-  for (int x = -x_max*expand_koef; x <= x_max*expand_koef; x++) {
-    for (int y = -y_max*expand_koef; y <= y_max*expand_koef; y++) {
-      if (map.cell_value({x+robot_on_map.x, y+robot_on_map.y}) > min_sensity) {
-        local_map_HT.transform({x, y});
-        printRect(150+y,150+y+1,150+x,150+x+1,0.0);
-        map_count++;
-      }
-    }
+  else {
+    return !(victim_sign_to_line1 == control_sign_to_line1 &&
+             victim_sign_to_line2 == control_sign_to_line2);
   }
-  glFlush();
-  //cout << "точек на локальной карте: " << map_count << endl << endl;
-  return 0;
-  glutMainLoop();
+  //return (
+  //        init_sign_to_line1 == control_sign_to_line1 &&
+  //        init_sign_to_line2 == control_sign_to_line2
+  //       ) ==
+  //       (
+  //        victim_sign_to_line1 == control_sign_to_line1 &&
+  //        victim_sign_to_line2 == control_sign_to_line2
+  //       );
 }
 
-shared_ptr<HT::Array_cov> cov_rho(shared_ptr<HT::Array_cov> prev,
-                                  shared_ptr<HT::Array_cov> curr) {
-  long long size = curr->size();
-  shared_ptr<HT::Array_cov> out(new HT::Array_cov(2*size-1,0));
-  for (size_t i = 0; i < size; i++) {
-    for (long long j = 0; j < size; j++) {
-      HT::Cov_type prev_val_pos = (j+i < 0 || j+i >= size) ? 0 : prev->at(j+i);
-      HT::Cov_type prev_val_neg = (j-i < 0 || j-i >= size) ? 0 : prev->at(j-i);
-      out->at(out->size() + i) += prev_val_pos*curr->at(j);
-      if (i != 0)
-        out->at(out->size() - i) += prev_val_neg*curr->at(j);
+vector<DiscretePoint2D> getCells(const RobotState &init_pose,
+                                 const TransformedLaserScan &scan,
+                                 const GridMap& map,
+                                 int left, int right, int bot, int top,
+                                 double low_bound_value) {
+  if (top - bot < 0 || right - left < 0) {
+    return {};
+  }
+  vector<DiscretePoint2D> out;
+  double a1, a2, b1, b2, c1, c2, x0, x1, x2, y0, y1, y2;
+  x0 = 0, y0 = 0;
+  x1 = scan.points[0].range*cos(init_pose.theta+scan.points[0].angle);
+  y1 = scan.points[0].range*sin(init_pose.theta+scan.points[0].angle);
+  x2 = scan.points[scan.points.size()-1].range*cos(init_pose.theta+scan.points[scan.points.size()-1].angle);
+  y2 = scan.points[scan.points.size()-1].range*sin(init_pose.theta+scan.points[scan.points.size()-1].angle);
+
+  DiscretePoint2D p0 = map.world_to_cell(x0,y0);
+  DiscretePoint2D p1 = map.world_to_cell(x1,y1);
+  DiscretePoint2D p2 = map.world_to_cell(x2,y2);
+  DiscretePoint2D p_init = map.world_to_cell(init_pose.x,init_pose.y);
+  DiscretePoint2D p_init_dir = map.world_to_cell(x0+5*cos(init_pose.theta),y0+5*sin(init_pose.theta));
+  a1 = p1.y-p0.y;           a2 = p2.y-p0.y;
+  b1 = p0.x-p1.x;           b2 = p0.x-p2.x;
+  c1 = p0.y*p1.x-p1.y*p0.x; c2 = p0.y*p2.x-p2.y*p0.x;
+  for (int x = left; x <= right; x++) {
+    for (int y = bot; y <= top; y++) {
+      if (is_in_correct_sector(p_init_dir,a1,b1,c1,a2,b2,c2,{(p1.x+p2.x)/2, (p1.y+p2.y)/2},{x,y})) {
+        double curr_value = map.cell_value({x+p_init.x,y+p_init.y});
+        if (curr_value > 0.5) {
+          out.push_back({x, y});
+        }
+      }
     }
   }
+  return out;
 }
 
 double HoughScanMatcher::process_scan(const RobotState &init_pose,
@@ -144,38 +154,59 @@ double HoughScanMatcher::process_scan(const RobotState &init_pose,
                                       RobotState &pose_delta) {
 
   shared_ptr<HoughTransform> scan_HT{new HoughTransform{720, 0.1}};
-  shared_ptr<HoughTransform> scan_HT_rho{new HoughTransform{720,0.1}};
-  //HoughTransform local_map_HT(720,0.1);
+  HoughTransform local_map_HT(720,0.1);
   //HoughTransform mapHT(scan.points.size(), map.scale()/2);
+  int right = 0, left = 0, top = 0, bot = 0;
   bool new_iter = true;
+  DiscretePoint2D prev_pt{0,0};
+  glutSetWindow(window_scan);
+  glClearColor(1.0,1.0,1.0,0.0);
+  glClear (GL_COLOR_BUFFER_BIT);
+  glFlush();
   for (size_t i = 0; i < scan.points.size(); i++) {
     if (!scan.points[i].is_occupied)
       continue;
-    /*if (isNear(scan.points[i-1],scan.points[i], new_iter)) {
-      new_iter = false;
-      continue;
-    }
-    new_iter = false;*/
 
     double x = scan.points[i].range * cos(init_pose.theta + scan.points[i].angle);
     double y = scan.points[i].range * sin(init_pose.theta + scan.points[i].angle);
-    /*double x,y;
-    if (count == 0) {
-      x = scan.points[i].range * cos(scan.points[i].angle);
-      y = scan.points[i].range * sin(scan.points[i].angle);
+    DiscretePoint2D curr_pt = map.world_to_cell(x,y);
+    if (curr_pt.x != prev_pt.x || curr_pt.y != prev_pt.y) {
+      scan_HT->transform({curr_pt.x,curr_pt.y});
+      if (    right < curr_pt.x) right = curr_pt.x;
+      if (curr_pt.x < left)       left = curr_pt.x;
+      if (      top < curr_pt.y)   top = curr_pt.y;
+      if (curr_pt.y < bot)         bot = curr_pt.y;
     }
-    else {
-      x = scan.points[i].range * cos(scan.d_yaw + scan.points[i].angle);
-      y = scan.points[i].range * sin(scan.d_yaw + scan.points[i].angle);
-    }*/
-    scan_HT->transform({x,y});
+    prev_pt.x = curr_pt.x; prev_pt.y = curr_pt.y;
+    printRect(curr_pt.y + 150, curr_pt.y+151, curr_pt.x+150, curr_pt.x+151,0.1,0.1,0.1);
 
-    x = init_pose.x + scan.points[i].range * cos(scan.points[i].angle);
-    y = init_pose.y + scan.points[i].range * sin(scan.points[i].angle);
-    //scan_HT_rho->transform({x,y});
-    //cout << "transform happens\n";
-    //i++;
   }
+  glFlush();
+  DiscretePoint2D init_cell = map.world_to_cell(init_pose.x,init_pose.y);
+  auto local_map = getCells(init_pose, scan, map, left, right, bot, top, min_sensity);
+  glutSetWindow(window_local_map);
+  glClearColor(1.0,1.0,1.0,0.0);
+  glClear (GL_COLOR_BUFFER_BIT);
+  glFlush();
+  for (auto& p : local_map) {
+    printRect(p.y + 150, p.y+151, p.x+150, p.x+151,0.1,0.1,0.1);
+  }
+  glFlush();
+  //if (local_map.size() == 0) {
+  //  count++;
+  //  pose_delta.x = 0;
+  //  pose_delta.y = 0;
+  //  pose_delta.theta = 0;
+  //  return 0;
+  //}
+
+  cout << "точек в local map: " << local_map.size() << endl;
+  //glutSetWindow(window_local_map);
+  for (const auto& cell : local_map) {
+    //printRect(cell.x+150,cell.x+151,cell.y+150, cell.y+151,0.0);
+    local_map_HT.transform({cell.x,cell.y});
+  }
+  //glFlush();
   //cout << endl << endl;
 
   //scan_HT->printOpenGL();
@@ -198,13 +229,11 @@ double HoughScanMatcher::process_scan(const RobotState &init_pose,
   }*/
   shared_ptr<HT::Array_cov> scanSpectr = scan_HT->spectrum();
   //shared_ptr<HT::Array_cov> scanSpectr_rho = scan_HT->spectrumRO();
-  //shared_ptr<HT::Array_cov> mapSpectr  = local_map_HT.spectrum();
+  shared_ptr<HT::Array_cov> mapSpectr  = local_map_HT.spectrum();
 
 
   if(count == 0) {
     prev_spectr = scanSpectr;
-    //prev_spectr_rho = scanSpectr_rho;
-    //prev_HT = scan_HT;
     count++;
     pose_delta.x = 0;
     pose_delta.y = 0;
@@ -214,7 +243,7 @@ double HoughScanMatcher::process_scan(const RobotState &init_pose,
 
   HT::Array_cov covariance(scanSpectr->size());
   for (size_t i = 0; i < covariance.size(); i++) {
-    covariance[i] = scalar_mul(*prev_spectr,*scanSpectr,i,0);
+    covariance[i] = difference(*mapSpectr,*scanSpectr,i,0);
   }
   /*cout << "cov[-3] = " << get(covariance,-3) << endl;
   cout << "cov[-2] = " << get(covariance,-2) << endl;
@@ -222,11 +251,13 @@ double HoughScanMatcher::process_scan(const RobotState &init_pose,
   cout << "cov[ 0] = " << get(covariance, 0) << endl;
   cout << "cov[ 1] = " << get(covariance, 1) << endl;*/
 
-  print(*prev_spectr, "prev_spectr");
-  print(*scanSpectr, "curr_spectr");
-  print(covariance,"cov");
+  //local_map_HT.printOpenGL();
+  print(*prev_spectr, "curr_spectr", true, 0,0,0);
+  print(*scanSpectr, "curr_spectr", true, 1.0,0,0);
+  print(*mapSpectr, "curr_spectr", false, 0,1.0,0);
+  print(covariance,"cov", true);
 
-  shared_ptr<_set_> better_angle_array = find_maxs(covariance);
+  shared_ptr<_set_<HT::Cov_type>> better_angle_array = find_maxs(covariance);
   auto iterator = better_angle_array->begin();
   int offset = iterator->ind;
 
@@ -238,7 +269,7 @@ double HoughScanMatcher::process_scan(const RobotState &init_pose,
   cout << "offset found: " << offset << ", with value " << iterator->value << endl;
   //cout << "d_yaw = " << scan.d_yaw << endl;
   //cout << "sm said " << offset*scan_HT->delta_theta() <<endl;
-  pose_delta.theta = offset*scan_HT->delta_theta()/(double)2;
+  pose_delta.theta = offset*scan_HT->delta_theta();
   cout << "корректировка " << pose_delta.theta << endl;
   pose_delta.x = 0;
   pose_delta.y = 0;
@@ -315,27 +346,6 @@ inline double scalar_mul(const std::vector<ScanPoint>& v1,
     out += get(v1,(long)(ind1+i)).range*get(v2,(long)(ind2+i)).range;
   return out;
 }
-
-//double HoughScanMatcher::process_scan(const RobotState &init_pose,
-//                                      const TransformedLaserScan &scan,
-//                                      const GridMap &map,
-//                                      RobotState &pose_delta) {
-//  cout << "начался process scan\n";
-//  vector<double> covariance(scan.points.size(),0);
-//  cout << "создали массив для ковариации размером" << scan.points.size() << endl;
-//  cout << "начали считать ковариации:\n";
-//  for (long i = 0; i < covariance.size(); i++) {
-//    covariance[i] = scalar_mul(scan.points,prev_scan.points,0,i);
-//    //cout << "covariance[" << i << "] = " << covariance[i] << endl;
-//  }
-//  cout << "посчитали значение ковариаций\n";
-//  auto sorted = find_maxs(covariance);
-//  cout << "отсортировали значения\n";
-//  long offset = sorted->begin()->ind;
-//  cout << "длина всего массива равна " << covariance.size() << ", а смещение получилось " << offset <<endl;
-//  prev_scan = scan;
-//  return 0;
-//}
 DiscretePoint2D rotate(double fi, DiscretePoint2D pt) {
   auto res_pt = pt;
   res_pt.x = cos(fi)*pt.x - sin(fi)*pt.y;
