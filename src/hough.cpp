@@ -4,9 +4,11 @@
 #include <iomanip>
 #include <sstream>
 
+#ifdef GL_MODE
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
+#endif
 
 #include <random>
 

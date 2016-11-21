@@ -3,7 +3,7 @@
 #include <math.h>
 #include <ostream>
 #include <memory>
-#include "../../core/geometry_utils.h"
+#include "../geometry_utils.h"
 #include "raster.h"
 #include "extra_util_functions.h"
 

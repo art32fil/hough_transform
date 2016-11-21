@@ -1,7 +1,7 @@
 #pragma once
 
 #include "hough.h"
-#include "../../core/grid_scan_matcher.h"
+#include "../grid_scan_matcher.h"
 
 #ifdef GL_MODE
 #include <GL/gl.h>
