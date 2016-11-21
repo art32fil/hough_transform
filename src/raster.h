@@ -3,7 +3,6 @@
 #include <functional>
 #include <iostream>
 
-//#define DEBUG 1
 
 template <typename PointT>
 class RasterGrid{

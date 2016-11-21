@@ -7,14 +7,19 @@ class VectorPosNegIndex {
   std::vector<T> _neg_part;
 public:
 
-  using value_type = T;
-
   VectorPosNegIndex() {}
   VectorPosNegIndex(const std::vector<T>& pos_part,
                     const std::vector<T>& neg_part) :
                       _pos_part(pos_part), _neg_part(neg_part) {}
-  VectorPosNegIndex(size_t size) : _pos_part(size) {}
-  VectorPosNegIndex(size_t size, const T init_val) : _pos_part(size,init_val) {}
+  VectorPosNegIndex(size_t size) : _pos_part(size - size/2),
+                                   _neg_part(size/2) {}
+  VectorPosNegIndex(size_t size, const T& init_val) :
+                     _pos_part(size - size/2, init_val),
+                     _neg_part(size/2, init_val){}
+  VectorPosNegIndex(const VectorPosNegIndex<T, IndType>& v) = default;
+  VectorPosNegIndex(VectorPosNegIndex<T, IndType>&& v) = default;
+  VectorPosNegIndex<T,IndType>& operator=(const VectorPosNegIndex<T,IndType>& ) = default;
+  VectorPosNegIndex<T,IndType>& operator=(VectorPosNegIndex<T,IndType>&& ) = default;
 
   T& operator [] (IndType i) { return at(i); }
   T& at(IndType i) {
@@ -43,7 +48,7 @@ public:
   size_t size_pos() const { return _pos_part.size(); }
   size_t size_neg() const { return _neg_part.size(); }
 
-  bool exist_at(IndType i) { return -size_neg() <= i && i < size_pos(); }
+  bool has(IndType i) { return -size_neg() <= i && i < size_pos(); }
 
   class Iterator {
     IndType _i;
@@ -80,8 +85,11 @@ public:
       _i += ind;
       return *this;
     }
-    T& operator *() const {
-      return (*_value)[_i];
+    T& operator *() {
+      return _value->at(_i);
+    }
+    const T& operator *() const {
+      return _value->at(_i);
     }
   };
 
@@ -95,10 +103,19 @@ public:
 private:
   static void expand_if_not_contains(std::vector<T>& vec, IndType i) {
     if ((long long)vec.size() <= i) {
-      IndType count_to_add = i - vec.size() + 1;
+      IndType count_to_add =
+                      (closest_bounded_power_two(i/(long long)vec.size()) - 1)*
+                                                                    vec.size();
       std::vector<T> new_cells(count_to_add);
       vec.insert(vec.end(), new_cells.begin(), new_cells.end());
     }
     return;
+  }
+  static long closest_bounded_power_two(long x) {
+    long p2 = 1;
+    while (p2 <= x) {
+      p2 <<= 1;
+    }
+    return p2;
   }
 };

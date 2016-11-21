@@ -5,12 +5,12 @@
 #include <iostream>
 #include <map>
 #include <string>
-//#include "vector_pos_neg_index.h"
 
+#ifdef GL_MODE
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
-
+#endif
 
 template <typename T>
 inline T& get(std::vector<T>& array, long ind) {
@@ -32,23 +32,6 @@ inline const T& get(const std::vector<T>& array, long ind) {
   return array[ind_cut];
 }
 
-/*template <typename T>
-inline T& get(VectorPosNegIndex<T>& array, long ind) {
-  //if (array.exist_at(ind))
-    return array[ind];
-}
-
-template <typename T>
-inline const T& get(const VectorPosNegIndex<T>& array, long ind) {
-  if (0 <= ind && ind < (long) array.size())
-    return array[ind];
-  long ind_cut = ind % (long) array.size();
-  if (ind_cut < 0)
-    ind_cut += array.size();
-  return array[ind_cut];
-}
-*/
-
 template <typename T>
 inline T scalar_mul(const std::vector<T>& v1,
                     const std::vector<T>& v2,
@@ -56,8 +39,6 @@ inline T scalar_mul(const std::vector<T>& v1,
   size_t v1size = v1.size();
   size_t v2size = v2.size();
   if (v1size != v2size) {
-    //std::cout << "vectors in scalar mull are not the same lenght!!" << std::endl
-    //          << "l1 = " << v1.size() << " l2 = " << v2.size() << std::endl;
     v1size = std::min(v1size,v2size);
   }
   T out = 0;
@@ -73,32 +54,15 @@ inline T difference(const std::vector<T>& v1,
   size_t v1size = v1.size();
   size_t v2size = v2.size();
   if (v1size != v2size) {
-    //std::cout << "vectors in scalar mull are not the same lenght!!" << std::endl
-    //          << "l1 = " << v1.size() << " l2 = " << v2.size() << std::endl;
     v1size = std::min(v1size,v2size);
   }
   T out = 0;
   for (long i = 0; i < (long)v1size; i++) {
-    T curr = std::abs(get(v1,ind1+i)-get(v2,ind2+i));
+    T curr = std::abs(get(v1, ind1+i) - get(v2, ind2+i));
     out += curr*curr;
   }
   return out;
 }
-
-/*template <typename T>
-inline T scalar_mul(const VectorPosNegIndex<T>& v1,
-                    const VectorPosNegIndex<T>& v2,
-                    long ind1 = 0, long ind2 = 0) {
-  size_t v1size = v1.size();
-  size_t v2size = v2.size();
-  if (v1size != v2size) {
-    v1size = std::min(v1size,v2size);
-  }
-  T out = 0;
-  for (long i = -(long)v1.size_neg(); i < (long)v1.size_pos(); i++) {
-    out += v1[ind1+i]*v2[ind2+i];
-  }
-}*/
 
 template <typename T>
 inline std::shared_ptr<std::vector<T>> shift(const std::vector<T>& v, int shift){
@@ -129,6 +93,7 @@ inline T my_min(std::vector<T> array) {
   return min_local;
 }
 
+#ifdef GL_MODE
 class WindowPoisition{
 public:
   static int x_position;
@@ -184,13 +149,11 @@ inline void printRect(int bot, int top, int left, int right, double gray) {
 }
 
 template<typename T>
-inline void print(std::vector<T>& y, int windowID, bool flush = true, float r=0, float g=0, float b=0) {
+inline void print(std::vector<T>& y, int windowID, bool is_first = true, float r=0, float g=0, float b=0) {
   glutSetWindow(windowID);
 
-  if (flush) {
+  if (is_first) {
     glClearColor (1.0, 1.0, 1.0, 0.0);
-    //glMatrixMode(GL_PROJECTION);
-    //glLoadIdentity();
     glClear (GL_COLOR_BUFFER_BIT);
     glFlush();
   }
@@ -201,6 +164,7 @@ inline void print(std::vector<T>& y, int windowID, bool flush = true, float r=0,
     glVertex3f(y.size(),1.0,0.0);
   glEnd();
   T max_y = my_max(y);
+  T min_y = my_min(y);
   glBegin(GL_LINE_STRIP);
     glVertex3f(1.0,1.0,0.0);
     glVertex3f(1.0,max_y,0.0);
@@ -212,10 +176,10 @@ inline void print(std::vector<T>& y, int windowID, bool flush = true, float r=0,
       glVertex3f(x+1,y[x]/(double)max_y+1,0.0);
       glVertex3f(x+1+1,y[x+1]/(double)max_y+1,0.0);
     glEnd();
-    if (y[x] == max_y) {
+    if (y[x] == min_y) {
       glColor3f(1.0,0.0,0.0);
       glBegin(GL_LINE_STRIP);
-        glVertex3f(x+1,2.0,0.0);
+        glVertex3f(x+1,y[x]/(double)max_y+1,0.0);
         glVertex3f(x+1,1.0,0.0);
       glEnd();
       glColor3f(r,g,b);
@@ -225,7 +189,7 @@ inline void print(std::vector<T>& y, int windowID, bool flush = true, float r=0,
 }
 
 template<typename T>
-inline void print(std::vector<T>& y, std::string name, bool flush = true, float r=0, float g=0, float b=0) {
+inline void print(std::vector<T>& y, std::string name, bool is_first = true, float r=0, float g=0, float b=0) {
   static std::map<std::string,int> window_store;
   if (window_store.find(name) == window_store.end()) {
     int windID = create_window(y.size()+2,3,name.c_str());
@@ -236,23 +200,6 @@ inline void print(std::vector<T>& y, std::string name, bool flush = true, float 
       std::cout << elem << " ";
     }
   }*/
-  print(y, window_store.find(name)->second, flush, r, g, b);
+  print(y, window_store.find(name)->second, is_first, r, g, b);
 }
-
-/*template<template <class> class Array, class Type>
-inline std::shared_ptr<Array<Array<Type>>> transponde(Array<Array<Type>>& matrix) {
-  std::shared_ptr<Array<Array<Type>>> result(new Array<Array<Type>>(matrix[0].size(), Array<Type>(matrix.size(),0)));
-  for (size_t x = 0; x < matrix.size(); x++) {
-    for (size_t y = 0; y < matrix[0].size(); y++) {
-      (*result)[y][x] = matrix[x][y];
-    }
-  }
-  return result;
-}
-
-template<template <class> class Array, class Type>
-inline std::shared_ptr<Array<Array<Type>>> mul(Array<Array<Type>>& A, Array<Array<Type>>& B) {
-  if (A.size() != B[0].size())
-    return std::shared_ptr<Array<Array<Type>>>(nullptr);
-  for (int row = 0; row < A[0].size(); )
-}*/
+#endif

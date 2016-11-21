@@ -1,9 +1,8 @@
 #include "hough.h"
 #include "extra_util_functions.h"
-int WindowPoisition::x_position = 0;
-int WindowPoisition::y_position = 0;
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 
 #include <GL/gl.h>
 #include <GL/glu.h>
@@ -13,9 +12,14 @@ int WindowPoisition::y_position = 0;
 
 using namespace std;
 
-HoughTransform::HoughTransform(int theta_partition = 20,
-                                 double delta_ro = 0.5) :
-                                        rg(2*M_PI / theta_partition, delta_ro) {
+#ifdef GL_MODE
+  int WindowPoisition::x_position = 0;
+  int WindowPoisition::y_position = 0;
+#endif
+int HoughTransform::count = 0;
+
+HoughTransform::HoughTransform(int theta_partition = 20,double delta_ro = 0.5) :
+                           rg(2*M_PI/theta_partition, delta_ro), window_id(-1) {
   _cells =  Array2d(theta_partition);
 }
 
@@ -30,7 +34,6 @@ void HoughTransform::update_size(const size_t new_height) {
 }
 
 long long HoughTransform::invariant_function(long long x) {
-  //return x*x;
   return x*x;
 }
 
@@ -48,18 +51,11 @@ void HoughTransform::transform(const PointD& p){
       max_y = pt.y;
   }
   update_size(max_y);
-  //for (auto pt : points) {
   for (size_t i = 0; i < points.size(); i++) {
     if (0 <= points[i].x && points[i].x < (int) width() &&
-        0 <= points[i].y && points[i].y < (int) height()
-        // &&!((points[i+1].x - points[i].x == 0)&&(points[i+1].y - points[i].y == 0))
-        ) {
+        0 <= points[i].y && points[i].y < (int) height()) {
       _cells[points[i].x][points[i].y]++;
     }
-    /*else {
-      cout << "point is dropped: (" << p.x << "; " << p.y << ") when \n"
-           << "               w = " << width() << ", h = " << height() << endl;
-    }*/
   }
 }
 
@@ -117,8 +113,19 @@ std::ostream& operator<<(std::ostream& ostr, const HoughTransform& h) {
   return ostr;
 }
 
-int HoughTransform::printOpenGL() const {
-  int window_id = create_window(2*width(), 2*height(),"hough");
+#ifdef GL_MODE
+int HoughTransform::printOpenGL(int col) {
+  if (window_id == -1) {
+    stringstream sstr;
+    sstr << "hough " << ++count;
+    window_id = create_window(2*width(), 2*height(),sstr.str().c_str());
+  }
+  else {
+    glutSetWindow(window_id);
+    glClearColor(1.0, 1.0, 1.0, 0.0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glFlush();
+  }
   int maxVal = 0;
   for (size_t y = 0; y < height(); y++) {
     for (size_t x = 0; x < width(); x++) {
@@ -135,14 +142,13 @@ int HoughTransform::printOpenGL() const {
 
   }
   glColor3f(0.5,0.5,0.5);
-  //glLineWidth(2);
   glBegin(GL_LINE_LOOP);
     glVertex3i(width()/2, height()/2, 0);
     glVertex3i(width()/2*3, height()/2, 0);
     glVertex3i(width()/2*3, height()/2*3, 0);
     glVertex3i(width()/2, height()/2*3, 0);
-    //glVertex3i(width()/2, height()/2, 0);
   glEnd();
   glFlush();
   return window_id;
 }
+#endif
